@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduFee — Smart Fee Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --border: #2a2a3a;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --accent3: #43e97b;
+    --text: #e8e8f0;
+    --muted: #6b6b88;
+    --card-glow: rgba(108,99,255,0.08);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 20%, rgba(108,99,255,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(255,101,132,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 64px;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 1.4rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .logo span { color: var(--accent); }
+  .header-badge {
+    font-size: 0.72rem; font-weight: 500;
+    background: rgba(108,99,255,0.15); border: 1px solid rgba(108,99,255,0.3);
+    color: #a89fff; padding: 0.2rem 0.7rem; border-radius: 999px; letter-spacing: 0.05em;
+  }
+
+  /* ── LAYOUT ── */
+  .app {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    min-height: calc(100vh - 64px);
+    position: relative; z-index: 1;
+  }
+
+  /* ── SIDEBAR ── */
+  aside {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1rem;
+    display: flex; flex-direction: column; gap: 0.3rem;
+  }
+  .nav-section-label {
+    font-size: 0.65rem; font-weight: 600; letter-spacing: 0.12em;
+    color: var(--muted); text-transform: uppercase;
+    padding: 0.4rem 0.75rem; margin-top: 0.8rem;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.65rem 0.85rem; border-radius: 10px;
+    cursor: pointer; font-size: 0.9rem; font-weight: 400;
+    color: var(--muted); transition: all 0.2s ease;
+    border: 1px solid transparent;
+  }
+  .nav-item:hover { background: var(--surface); color: var(--text); }
+  .nav-item.active {
+    background: rgba(108,99,255,0.12);
+    border-color: rgba(108,99,255,0.25);
+    color: #a89fff; font-weight: 500;
+  }
+  .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto; font-size: 0.65rem;
+    background: var(--accent); color: #fff;
+    border-radius: 999px; padding: 0.1rem 0.45rem; font-weight: 600;
+  }
+
+  /* ── MAIN ── */
+  main {
+    padding: 2rem 2.5rem;
+    overflow-y: auto;
+  }
+  .page { display: none; animation: fadeUp 0.35s ease; }
+  .page.active { display: block; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .page-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+  .page-title { font-family: 'Syne', sans-serif; font-size: 1.9rem; font-weight: 700; }
+  .page-sub { color: var(--muted); font-size: 0.88rem; margin-top: 0.2rem; }
+
+  /* ── STATS GRID ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem; margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem 1.4rem;
+    position: relative; overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+  .stat-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--card-glow);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .stat-card:hover::before { opacity: 1; }
+  .stat-label { font-size: 0.75rem; color: var(--muted); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 700; margin-top: 0.35rem; }
+  .stat-change { font-size: 0.78rem; margin-top: 0.3rem; }
+  .up { color: var(--accent3); }
+  .down { color: var(--accent2); }
+  .stat-icon {
+    position: absolute; right: 1.2rem; top: 1.2rem;
+    font-size: 1.5rem; opacity: 0.2;
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700;
+    margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+  }
+  .section-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; margin-bottom: 2rem;
+  }
+  .table-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.25rem; border-bottom: 1px solid var(--border);
+  }
+  .search-box {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.45rem 0.85rem;
+    font-size: 0.85rem; color: var(--text); width: 220px;
+    transition: border-color 0.2s;
+  }
+  .search-box input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-size: 0.85rem; font-family: inherit; width: 100%;
+  }
+  .search-box:focus-within { border-color: var(--accent); }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--muted);
+    padding: 0.85rem 1.25rem; text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { transition: background 0.15s; }
+  tbody tr:hover { background: rgba(255,255,255,0.025); }
+  tbody td {
+    padding: 0.9rem 1.25rem; font-size: 0.88rem;
+    border-bottom: 1px solid rgba(42,42,58,0.5);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700;
+    margin-right: 0.5rem; vertical-align: middle;
+  }
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 0.2rem 0.65rem; border-radius: 999px;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.03em;
+  }
+  .badge-green { background: rgba(67,233,123,0.12); color: #43e97b; border: 1px solid rgba(67,233,123,0.25); }
+  .badge-red   { background: rgba(255,101,132,0.12); color: #ff6584; border: 1px solid rgba(255,101,132,0.25); }
+  .badge-yellow{ background: rgba(255,200,80,0.12);  color: #ffc850; border: 1px solid rgba(255,200,80,0.25); }
+
+  .action-btn {
+    background: none; border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.3rem 0.6rem;
+    color: var(--muted); cursor: pointer; font-size: 0.8rem;
+    transition: all 0.15s;
+  }
+  .action-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(108,99,255,0.08); }
+
+  /* ── BTN ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.6rem 1.2rem; border-radius: 10px;
+    font-family: inherit; font-size: 0.88rem; font-weight: 500;
+    cursor: pointer; transition: all 0.2s; border: none;
+  }
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    box-shadow: 0 4px 16px rgba(108,99,255,0.35);
+  }
+  .btn-primary:hover { background: #7c75ff; box-shadow: 0 6px 20px rgba(108,99,255,0.45); transform: translateY(-1px); }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: rgba(255,101,132,0.12); color: var(--accent2); border: 1px solid rgba(255,101,132,0.25); }
+  .btn-danger:hover { background: rgba(255,101,132,0.2); }
+
+  /* ── FORM / MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px); z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 2rem; width: 480px; max-width: 95vw;
+    transform: scale(0.95) translateY(20px);
+    transition: transform 0.25s cubic-bezier(.34,1.56,.64,1);
+    box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+  }
+  .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+  .modal-title {
+    font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 0.78rem; font-weight: 500; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+  input, select {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 9px; padding: 0.65rem 0.9rem;
+    color: var(--text); font-family: inherit; font-size: 0.9rem;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(108,99,255,0.15);
+  }
+  select option { background: var(--surface2); }
+  .form-footer { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+
+  /* ── FEE PAGE SPECIFIC ── */
+  .fee-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; margin-bottom: 2rem; }
+  .fee-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.25rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+  }
+  .fee-card-name { font-weight: 600; font-size: 0.95rem; }
+  .fee-card-roll { font-size: 0.8rem; color: var(--muted); }
+  .fee-progress { height: 6px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  .fee-progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--accent3)); transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+  .fee-meta { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--muted); }
+
+  /* ── CHART ── */
+  .chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 2rem; }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 1.5rem;
+  }
+  .chart-title { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; margin-bottom: 1.25rem; color: var(--muted); }
+  .bar-chart { display: flex; align-items: flex-end; gap: 0.5rem; height: 120px; }
+  .bar-group { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; flex: 1; }
+  .bar {
+    width: 100%; border-radius: 5px 5px 0 0;
+    background: linear-gradient(180deg, var(--accent), rgba(108,99,255,0.3));
+    transition: height 0.6s cubic-bezier(.4,0,.2,1);
+    min-height: 4px;
+  }
+  .bar-label { font-size: 0.65rem; color: var(--muted); }
+
+  .donut-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+  svg.donut { width: 120px; height: 120px; }
+  .donut-legend { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.4rem; width: 100%; }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 2rem; right: 2rem; z-index: 999;
+    background: var(--surface); border: 1px solid var(--accent);
+    border-radius: 12px; padding: 0.85rem 1.25rem;
+    font-size: 0.88rem; color: var(--text);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(108,99,255,0.2);
+    transform: translateY(20px); opacity: 0;
+    transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center; padding: 3rem 1rem; color: var(--muted);
+  }
+  .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4; }
+  .empty-state p { font-size: 0.9rem; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; }
+    aside { flex-direction: row; border-right: none; border-bottom: 1px solid var(--border); overflow-x: auto; padding: 0.5rem; }
+    .nav-section-label { display: none; }
+    .stats-grid { grid-template-columns: repeat(2,1fr); }
+    .chart-row { grid-template-columns: 1fr; }
+    .fee-cards { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Edu<span>Fee</span>
+  </div>
+  <span class="header-badge">v2.0 · 2026</span>
+</header>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside>
+    <div class="nav-section-label">Overview</div>
+    <div class="nav-item active" onclick="navigate('dashboard', this)">
+      <span class="nav-icon">⬡</span> Dashboard
+    </div>
+    <div class="nav-section-label">Management</div>
+    <div class="nav-item" onclick="navigate('students', this)">
+      <span class="nav-icon">👤</span> Students
+      <span class="nav-badge" id="stuCount">0</span>
+    </div>
+    <div class="nav-item" onclick="navigate('fees', this)">
+      <span class="nav-icon">💳</span> Fee Records
+    </div>
+    <div class="nav-section-label">Actions</div>
+    <div class="nav-item" onclick="openModal('addStudent')">
+      <span class="nav-icon">＋</span> Add Student
+    </div>
+    <div class="nav-item" onclick="openModal('depositFee')">
+      <span class="nav-icon">↑</span> Deposit Fee
+    </div>
+  </aside>
+
+  <main>
+    <!-- DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-sub">Overview of your school fee system</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('addStudent')">＋ Add Student</button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">🎓</div>
+          <div class="stat-label">Total Students</div>
+          <div class="stat-value" id="dash-total">0</div>
+          <div class="stat-change up" id="dash-active">0 active</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-label">Total Collected</div>
+          <div class="stat-value" id="dash-collected">₹0</div>
+          <div class="stat-change up">this session</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✓</div>
+          <div class="stat-label">Fees Paid</div>
+          <div class="stat-value" id="dash-paid">0</div>
+          <div class="stat-change up" id="dash-paid-pct">0% on-time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚠</div>
+          <div class="stat-label">Pending</div>
+          <div class="stat-value" id="dash-pending">0</div>
+          <div class="stat-change down" id="dash-pending-pct">need attention</div>
+        </div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="chart-title">Monthly Fee Collection</div>
+          <div class="bar-chart" id="barChart"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Payment Status</div>
+          <div class="donut-wrap">
+            <svg class="donut" viewBox="0 0 36 36" id="donutChart">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#1c1c27" stroke-width="3.5"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#6c63ff" stroke-width="3.5"
+                stroke-dasharray="75 25" stroke-dashoffset="25" id="donutPaid" style="transition:stroke-dasharray 0.8s ease"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#ff6584" stroke-width="3.5"
+                stroke-dasharray="0 100" stroke-dashoffset="-50" id="donutPending" style="transition:stroke-dasharray 0.8s ease"/>
+            </svg>
+            <div class="donut-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#6c63ff"></div> Paid <span style="margin-left:auto;color:var(--text)" id="legend-paid">0</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:#ff6584"></div> Pending <span style="margin-left:auto;color:var(--text)" id="legend-pending">0</span></div>
+              <div class="legend-item"><div class="legend-dot" style="background:#43e97b"></div> Partial <span style="margin-left:auto;color:var(--text)" id="legend-partial">0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Recent Activity</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Student</th><th>Roll No.</th><th>Amount</th><th>Month</th><th>Status</th></tr>
+          </thead>
+          <tbody id="recentTable">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📋</div><p>No transactions yet. Deposit a fee to get started.</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- STUDENTS PAGE -->
+    <div class="page" id="page-students">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Students</div>
+          <div class="page-sub">Manage enrolled students</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('addStudent')">＋ Add Student</button>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-toolbar">
+          <div class="search-box">
+            🔍 <input type="text" placeholder="Search by name, roll, city..." oninput="filterStudents(this.value)" id="stuSearch">
+          </div>
+          <span id="stuCountLabel" style="font-size:0.82rem;color:var(--muted)">0 students</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Roll No.</th><th>Age</th><th>Class</th><th>City</th><th>Fee Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="studentTable">
+            <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🎓</div><p>No students yet. Add your first student!</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FEE RECORDS PAGE -->
+    <div class="page" id="page-fees">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Fee Records</div>
+          <div class="page-sub">Track all fee transactions</div>
+        </div>
+        <button class="btn btn-primary" onclick="openModal('depositFee')">↑ Deposit Fee</button>
+      </div>
+
+      <div class="fee-cards" id="feeCards">
+        <div style="grid-column:1/-1"><div class="empty-state"><div class="empty-icon">💳</div><p>No fee records yet.</p></div></div>
+      </div>
+
+      <div class="section-title">All Transactions</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Student</th><th>Roll No.</th><th>Amount</th><th>Month</th><th>Deposited</th></tr>
+          </thead>
+          <tbody id="feeTable">
+            <tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📄</div><p>No transactions recorded.</p></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODALS -->
+<!-- Add Student -->
+<div class="modal-overlay" id="modal-addStudent">
+  <div class="modal">
+    <div class="modal-title">Add New Student</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Full Name</label>
+        <input type="text" id="stu-name" placeholder="e.g. Arjun Sharma">
+      </div>
+      <div class="form-group">
+        <label>Roll Number</label>
+        <input type="number" id="stu-roll" placeholder="e.g. 101">
+      </div>
+      <div class="form-group">
+        <label>Age</label>
+        <input type="number" id="stu-age" placeholder="e.g. 16" min="3" max="30">
+      </div>
+      <div class="form-group">
+        <label>Class / Grade</label>
+        <input type="text" id="stu-class" placeholder="e.g. 10A">
+      </div>
+      <div class="form-group">
+        <label>City</label>
+        <input type="text" id="stu-city" placeholder="e.g. Hyderabad">
+      </div>
+      <div class="form-group full">
+        <label>Annual Fee (₹)</label>
+        <input type="number" id="stu-fee" placeholder="e.g. 25000" min="0">
+      </div>
+    </div>
+    <div class="form-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addStudent')">Cancel</button>
+      <button class="btn btn-primary" onclick="addStudent()">Add Student</button>
+    </div>
+  </div>
+</div>
+
+<!-- Deposit Fee -->
+<div class="modal-overlay" id="modal-depositFee">
+  <div class="modal">
+    <div class="modal-title">Deposit Fee</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Select Student</label>
+        <select id="fee-student">
+          <option value="">Choose a student...</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Amount (₹)</label>
+        <input type="number" id="fee-amount" placeholder="e.g. 5000" min="1">
+      </div>
+      <div class="form-group">
+        <label>Month</label>
+        <select id="fee-month">
+          <option value="January">January</option><option value="February">February</option>
+          <option value="March">March</option><option value="April">April</option>
+          <option value="May">May</option><option value="June">June</option>
+          <option value="July">July</option><option value="August">August</option>
+          <option value="September">September</option><option value="October">October</option>
+          <option value="November">November</option><option value="December">December</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-footer">
+      <button class="btn btn-ghost" onclick="closeModal('depositFee')">Cancel</button>
+      <button class="btn btn-primary" onclick="depositFee()">Confirm Deposit</button>
+    </div>
+  </div>
+</div>
+
+<!-- View Student -->
+<div class="modal-overlay" id="modal-viewStudent">
+  <div class="modal">
+    <div id="viewStudentContent"></div>
+    <div class="form-footer">
+      <button class="btn btn-ghost" onclick="closeModal('viewStudent')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast">✓ <span id="toastMsg">Done</span></div>
+
+<script>
+// ── STATE ──
+let students = JSON.parse(localStorage.getItem('edufee_students') || '[]');
+let fees     = JSON.parse(localStorage.getItem('edufee_fees') || '[]');
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const COLORS = ['#6c63ff','#ff6584','#43e97b','#ffc850','#56c2e6','#a78bfa'];
+
+function save() {
+  localStorage.setItem('edufee_students', JSON.stringify(students));
+  localStorage.setItem('edufee_fees', JSON.stringify(fees));
+}
+
+// ── NAVIGATION ──
+function navigate(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (el) el.classList.add('active');
+  if (page === 'students') renderStudents();
+  if (page === 'fees') renderFees();
+  if (page === 'dashboard') renderDashboard();
+}
+
+// ── MODAL ──
+function openModal(id) {
+  if (id === 'depositFee') populateFeeSelect();
+  document.getElementById('modal-' + id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById('modal-' + id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// ── TOAST ──
+function toast(msg, isError) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.style.borderColor = isError ? 'var(--accent2)' : 'var(--accent)';
+  t.querySelector(':first-child') && (t.childNodes[0].textContent = isError ? '✗ ' : '✓ ');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── ADD STUDENT ──
+function addStudent() {
+  const name = document.getElementById('stu-name').value.trim();
+  const roll = parseInt(document.getElementById('stu-roll').value);
+  const age  = parseInt(document.getElementById('stu-age').value);
+  const cls  = document.getElementById('stu-class').value.trim();
+  const city = document.getElementById('stu-city').value.trim();
+  const fee  = parseInt(document.getElementById('stu-fee').value) || 0;
+
+  if (!name || !roll || !age || !cls || !city) return toast('Please fill all fields', true);
+  if (students.find(s => s.roll === roll)) return toast('Roll number already exists!', true);
+
+  students.push({ id: Date.now(), name, roll, age, cls, city, annualFee: fee, addedOn: new Date().toLocaleDateString() });
+  save();
+  closeModal('addStudent');
+  ['stu-name','stu-roll','stu-age','stu-class','stu-city','stu-fee'].forEach(id => document.getElementById(id).value = '');
+  renderAll();
+  toast(`${name} added successfully!`);
+}
+
+// ── DEPOSIT FEE ──
+function populateFeeSelect() {
+  const sel = document.getElementById('fee-student');
+  sel.innerHTML = '<option value="">Choose a student...</option>';
+  students.forEach(s => sel.innerHTML += `<option value="${s.roll}">${s.name} (Roll: ${s.roll})</option>`);
+  // Set current month
+  document.getElementById('fee-month').value = MONTHS[new Date().getMonth()] + ' ' || '';
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('fee-month').value = months[new Date().getMonth()];
+}
+
+function depositFee() {
+  const roll   = parseInt(document.getElementById('fee-student').value);
+  const amount = parseInt(document.getElementById('fee-amount').value);
+  const month  = document.getElementById('fee-month').value;
+  if (!roll || !amount || !month) return toast('Please fill all fields', true);
+  const stu = students.find(s => s.roll === roll);
+  fees.push({ id: Date.now(), roll, name: stu.name, amount, month, date: new Date().toLocaleDateString() });
+  save();
+  closeModal('depositFee');
+  document.getElementById('fee-amount').value = '';
+  renderAll();
+  toast(`₹${amount.toLocaleString()} deposited for ${stu.name}`);
+}
+
+// ── REMOVE STUDENT ──
+function removeStudent(roll) {
+  if (!confirm('Remove this student and all their fee records?')) return;
+  const stu = students.find(s => s.roll === roll);
+  students = students.filter(s => s.roll !== roll);
+  fees     = fees.filter(f => f.roll !== roll);
+  save();
+  renderAll();
+  toast(`${stu.name} removed`);
+}
+
+// ── VIEW STUDENT ──
+function viewStudent(roll) {
+  const stu = students.find(s => s.roll === roll);
+  const stuFees = fees.filter(f => f.roll === roll);
+  const totalPaid = stuFees.reduce((a,f) => a + f.amount, 0);
+  const pct = stu.annualFee ? Math.min(100, Math.round(totalPaid / stu.annualFee * 100)) : 0;
+  document.getElementById('viewStudentContent').innerHTML = `
+    <div class="modal-title" style="display:flex;align-items:center;gap:0.75rem">
+      <div class="avatar" style="background:${COLORS[roll%COLORS.length]}22;color:${COLORS[roll%COLORS.length]};width:44px;height:44px;font-size:1rem;">${stu.name[0]}</div>
+      ${stu.name}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem;font-size:0.85rem">
+      <div><span style="color:var(--muted)">Roll:</span> ${stu.roll}</div>
+      <div><span style="color:var(--muted)">Age:</span> ${stu.age}</div>
+      <div><span style="color:var(--muted)">Class:</span> ${stu.cls}</div>
+      <div><span style="color:var(--muted)">City:</span> ${stu.city}</div>
+      <div><span style="color:var(--muted)">Annual Fee:</span> ₹${(stu.annualFee||0).toLocaleString()}</div>
+      <div><span style="color:var(--muted)">Total Paid:</span> <span style="color:var(--accent3)">₹${totalPaid.toLocaleString()}</span></div>
+    </div>
+    ${stu.annualFee ? `<div style="margin-bottom:1.25rem">
+      <div class="fee-meta" style="margin-bottom:0.4rem"><span>Payment Progress</span><span>${pct}%</span></div>
+      <div class="fee-progress"><div class="fee-progress-fill" style="width:${pct}%"></div></div>
+    </div>` : ''}
+    <div style="font-family:'Syne',sans-serif;font-size:0.85rem;font-weight:700;color:var(--muted);margin-bottom:0.75rem">Fee History</div>
+    ${stuFees.length ? stuFees.map(f=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.85rem">
+        <span>${f.month}</span>
+        <span style="color:var(--accent3);font-weight:600">₹${f.amount.toLocaleString()}</span>
+        <span style="color:var(--muted);font-size:0.75rem">${f.date}</span>
+      </div>`).join('') : '<div style="color:var(--muted);font-size:0.85rem;text-align:center;padding:1rem">No fee records found</div>'}
+  `;
+  openModal('viewStudent');
+}
+
+// ── RENDER HELPERS ──
+const statusBadge = (roll) => {
+  const stuFees = fees.filter(f => f.roll === roll);
+  const stu = students.find(s => s.roll === roll);
+  if (!stuFees.length) return '<span class="badge badge-red">Unpaid</span>';
+  if (!stu.annualFee) return '<span class="badge badge-green">Paid</span>';
+  const pct = stuFees.reduce((a,f)=>a+f.amount,0) / stu.annualFee * 100;
+  if (pct >= 95) return '<span class="badge badge-green">Paid</span>';
+  if (pct >= 40) return '<span class="badge badge-yellow">Partial</span>';
+  return '<span class="badge badge-red">Unpaid</span>';
+};
+
+function renderStudents(filter='') {
+  const tbody = document.getElementById('studentTable');
+  const label = document.getElementById('stuCountLabel');
+  const filtered = filter
+    ? students.filter(s => [s.name,s.roll+'',s.city,s.cls].some(v=>v.toLowerCase().includes(filter.toLowerCase())))
+    : students;
+  label.textContent = `${filtered.length} student${filtered.length!==1?'s':''}`;
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🎓</div><p>${filter?'No results found':'No students yet. Add your first student!'}</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(s => `
+    <tr>
+      <td><div class="avatar" style="background:${COLORS[s.roll%COLORS.length]}22;color:${COLORS[s.roll%COLORS.length]}">${s.name[0]}</div>${s.name}</td>
+      <td style="color:var(--muted)">#${s.roll}</td>
+      <td>${s.age}</td>
+      <td><span class="badge badge-yellow">${s.cls}</span></td>
+      <td>${s.city}</td>
+      <td>${statusBadge(s.roll)}</td>
+      <td style="display:flex;gap:0.4rem">
+        <button class="action-btn" onclick="viewStudent(${s.roll})">👁 View</button>
+        <button class="action-btn" onclick="openModal('depositFee')" style="border-color:rgba(67,233,123,0.3);color:#43e97b" title="Quick fee deposit">₹</button>
+        <button class="action-btn" onclick="removeStudent(${s.roll})" style="border-color:rgba(255,101,132,0.3);color:#ff6584">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+function filterStudents(v) { renderStudents(v); }
+
+function renderFees() {
+  // Fee cards per student
+  const feeCards = document.getElementById('feeCards');
+  const feeTable = document.getElementById('feeTable');
+  if (!students.length) {
+    feeCards.innerHTML = '<div style="grid-column:1/-1"><div class="empty-state"><div class="empty-icon">💳</div><p>No students yet.</p></div></div>';
+    feeTable.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📄</div><p>No transactions recorded.</p></div></td></tr>';
+    return;
+  }
+  feeCards.innerHTML = students.map(s => {
+    const stuFees = fees.filter(f=>f.roll===s.roll);
+    const paid = stuFees.reduce((a,f)=>a+f.amount,0);
+    const pct = s.annualFee ? Math.min(100, Math.round(paid/s.annualFee*100)) : (paid?100:0);
+    return `<div class="fee-card">
+      <div style="display:flex;align-items:center;gap:0.5rem">
+        <div class="avatar" style="background:${COLORS[s.roll%COLORS.length]}22;color:${COLORS[s.roll%COLORS.length]};width:28px;height:28px;font-size:0.7rem">${s.name[0]}</div>
+        <div>
+          <div class="fee-card-name">${s.name}</div>
+          <div class="fee-card-roll">Roll #${s.roll} · ${s.cls}</div>
+        </div>
+      </div>
+      <div class="fee-meta"><span>₹${paid.toLocaleString()} paid</span><span>${pct}%</span></div>
+      <div class="fee-progress"><div class="fee-progress-fill" style="width:${pct}%"></div></div>
+      ${s.annualFee ? `<div class="fee-meta"><span style="color:var(--muted)">of ₹${s.annualFee.toLocaleString()}</span><span style="color:${pct>=95?'var(--accent3)':pct>=40?'#ffc850':'var(--accent2)'};">${pct>=95?'Fully Paid':pct>=40?'Partial':'Unpaid'}</span></div>` : ''}
+    </div>`;
+  }).join('');
+
+  if (!fees.length) {
+    feeTable.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📄</div><p>No transactions recorded.</p></div></td></tr>';
+    return;
+  }
+  const sorted = [...fees].sort((a,b)=>b.id-a.id);
+  feeTable.innerHTML = sorted.map(f=>`
+    <tr>
+      <td><div class="avatar" style="background:${COLORS[f.roll%COLORS.length]}22;color:${COLORS[f.roll%COLORS.length]}">${f.name[0]}</div>${f.name}</td>
+      <td style="color:var(--muted)">#${f.roll}</td>
+      <td style="color:var(--accent3);font-weight:600">₹${f.amount.toLocaleString()}</td>
+      <td>${f.month}</td>
+      <td style="color:var(--muted);font-size:0.82rem">${f.date}</td>
+    </tr>`).join('');
+}
+
+function renderDashboard() {
+  const total = students.length;
+  const totalCollected = fees.reduce((a,f)=>a+f.amount,0);
+  let paid=0, pending=0, partial=0;
+  students.forEach(s => {
+    const b = statusBadge(s.roll);
+    if (b.includes('Paid') && !b.includes('Partial')) paid++;
+    else if (b.includes('Partial')) partial++;
+    else pending++;
+  });
+
+  document.getElementById('dash-total').textContent = total;
+  document.getElementById('dash-active').textContent = `${total} enrolled`;
+  document.getElementById('dash-collected').textContent = `₹${totalCollected.toLocaleString()}`;
+  document.getElementById('dash-paid').textContent = paid;
+  document.getElementById('dash-paid-pct').textContent = total ? `${Math.round(paid/total*100)}% on-time` : '0% on-time';
+  document.getElementById('dash-pending').textContent = pending;
+  document.getElementById('dash-pending-pct').textContent = pending ? `${pending} need attention` : 'All clear!';
+  document.getElementById('stuCount').textContent = total;
+
+  // Donut
+  const paidPct  = total ? Math.round(paid/total*100) : 0;
+  const pendPct  = total ? Math.round(pending/total*100) : 0;
+  document.getElementById('donutPaid').setAttribute('stroke-dasharray', `${paidPct} ${100-paidPct}`);
+  document.getElementById('donutPending').setAttribute('stroke-dasharray', `${pendPct} ${100-pendPct}`);
+  document.getElementById('donutPending').setAttribute('stroke-dashoffset', `${-(25 + paidPct)}`);
+  document.getElementById('legend-paid').textContent = paid;
+  document.getElementById('legend-pending').textContent = pending;
+  document.getElementById('legend-partial').textContent = partial;
+
+  // Bar chart by month
+  const monthlyTotals = {};
+  MONTHS.forEach(m => monthlyTotals[m] = 0);
+  fees.forEach(f => {
+    const abbr = f.month.slice(0,3);
+    if (monthlyTotals[abbr] !== undefined) monthlyTotals[abbr] += f.amount;
+  });
+  const vals = Object.values(monthlyTotals);
+  const maxVal = Math.max(...vals, 1);
+  document.getElementById('barChart').innerHTML = MONTHS.map((m, i) => {
+    const h = Math.round((vals[i]/maxVal)*100);
+    return `<div class="bar-group">
+      <div class="bar" style="height:${h}%;opacity:${vals[i]>0?1:0.2}"></div>
+      <span class="bar-label">${m}</span>
+    </div>`;
+  }).join('');
+
+  // Recent table
+  const tbody = document.getElementById('recentTable');
+  const recent = [...fees].sort((a,b)=>b.id-a.id).slice(0,5);
+  if (!recent.length) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📋</div><p>No transactions yet.</p></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = recent.map(f=>`
+    <tr>
+      <td><div class="avatar" style="background:${COLORS[f.roll%COLORS.length]}22;color:${COLORS[f.roll%COLORS.length]}">${f.name[0]}</div>${f.name}</td>
+      <td style="color:var(--muted)">#${f.roll}</td>
+      <td style="color:var(--accent3);font-weight:600">₹${f.amount.toLocaleString()}</td>
+      <td>${f.month}</td>
+      <td><span class="badge badge-green">Received</span></td>
+    </tr>`).join('');
+}
+
+function renderAll() {
+  renderDashboard();
+  renderStudents(document.getElementById('stuSearch')?.value || '');
+  renderFees();
+  document.getElementById('stuCount').textContent = students.length;
+}
+
+// ── INIT ──
+renderAll();
+</script>
+</body>
+</html>
